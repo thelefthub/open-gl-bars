@@ -1,4 +1,3 @@
-//https://eavise.be/aph/
 #include <GL/glut.h>
 #include <math.h>
 #include "bar.h"
@@ -9,21 +8,40 @@
 #define INNM "../gegev.txt"
 #define LLEN 500
 #define ESC 27
-#define ACT 8
 #define LBL 20
-#define STEP 20
+#define STEP 2
 
 
-GLint winWidth = 800, winHeight = 800, prevHeight = 0;
-Activity activities[ACT];
+GLint winWidth = 800, winHeight = 800, prevHeight = 0, structCount = 0, start, end, xMax, yMax=0, act;
+Activity activities[ACTNUM];
+// int weekData [ WLEN ][ ACTNUM ];
+int weekData [ WLEN ];
+
 bool lines = false;
+
+void processData(void)
+{
+
+    for (int i = 0; i < WLEN; i++) 
+    {
+        int total = 0;
+        for (int j = 0; j < structCount; j++) 
+        {
+            total += activities[j].hours[i];
+            weekData[i] = total;
+            if (total>yMax) yMax=total;
+        }
+        
+    }
+   
+}
+
 
 void processFile(void)
 {
     FILE *finp;
     char line [LLEN] ;
-    int lineCount = 1, structCount = 0;
-    int start, end;
+    int lineCount = 1;
     char activity [NLEN];
 
     finp = fopen(INNM, "r");
@@ -44,6 +62,7 @@ void processFile(void)
         {
             sscanf(line, "%d", &end);
             printf("end: %d\n", end);
+            xMax = (end-start+1);
         }
         else
         {
@@ -63,15 +82,6 @@ void processFile(void)
                     strcpy(activities[structCount].name, input);
                     // printf("processed %s\n",input);
                 }
-
-                // only persist data between start and end (week) dates?
-                // if (colCount >= start && colCount <= end)
-                // {
-                //     activities[structCount].hours[colCount]= atoi(input);
-                //     printf("processed %d\n",activities[structCount].hours[colCount]);
-                // }
-
-                // or persist all week data?
                 else
                 {
                     activities[structCount].hours[hourCount]= atoi(input);
@@ -84,27 +94,16 @@ void processFile(void)
         }
         lineCount++;
     }
-    
     fclose(finp);
-
-    // test
-    // for (int i = 0; i < 8; i++) 
-    // {
-    //     printf("\n activity %s has these hours: ", activities[i].name);
-    //     for (int j = 0; j < 53; j++) 
-    //     {
-    //         printf(" %d ", activities[i].hours[j]);
-    //     }
-    // }
 }
-
 
 
 void init(void)
 {
-	glClearColor(1.0,1.0,1.0,1.0);
+    processData();
+    glClearColor(1.0,1.0,1.0,1.0);
     glMatrixMode(GL_PROJECTION);
-    gluOrtho2D(0.0, 200.0, 0.0, 150.0);
+    gluOrtho2D(-0.1*xMax*2, 1.1*xMax*2, -0.1*yMax,1.1*yMax);
     glColor3f(0.0, 0.0, 1.0);
 }
 
@@ -114,8 +113,8 @@ void xAxesDef(void)
     glBegin(GL_LINES);
     // glPointSize(20.0);
     glColor3f(0.412, 0.412, 0.412);
-    glVertex2i(30, 10);
-    glVertex2i(195, 10);
+    glVertex2i(0, 0);
+    glVertex2i(xMax*2, 0);
     glEnd();
     
 }
@@ -126,8 +125,8 @@ void yAxesDef(void)
     glBegin(GL_LINES);
     // glPointSize(20.0);
     glColor3f(0.412, 0.412, 0.412);
-    glVertex2i(30, 10);
-    glVertex2i(30, 140);
+    glVertex2i(0, 0);
+    glVertex2i(0, yMax);
     glEnd();
     
 }
@@ -144,6 +143,7 @@ void printLabels(int x, int y, char *string)
     }
 }
 
+// draw lines connecting the top of consecutive bars
 void drawTopLines(int x1, int y1, int x2, int y2)
 {
     glBegin(GL_LINES);
@@ -155,72 +155,54 @@ void drawTopLines(int x1, int y1, int x2, int y2)
 
 }
 
+// show result labels and lines connecting bars
 void showLines(void)
 {
-    int startPos = 37.5;
-    int endPos = 57.5;
-    int labelXpos = 35;
-    int labelYpos;
+    char int_str[4];
+    int i = (start-1);
+    int startX = 1;
+    int endX = 3;
+    int startLabelX=1;
     int prevHeight;
-    int currentHeight;
-    char int_str[LBL];
-    
-    for (int i = 0; i < ACT; i++) 
+    for ( i; i < end; i++) 
     {
-        int activityHours = 0;
-        for (int j = 0; j < 53; j++) 
-        {
-            activityHours += activities[i].hours[j];
-        }
-        currentHeight = 10+(activityHours/10);
-        labelYpos = currentHeight+2;
-        sprintf(int_str, "%d", activityHours);
-        printLabels(labelXpos, labelYpos, int_str);
-
-        if (i>0)
-        {       
-            drawTopLines(startPos, prevHeight, endPos, currentHeight);
-            startPos += STEP; 
-            endPos += STEP; 
-        }
-        prevHeight = currentHeight;
-        labelXpos += STEP;
+        sprintf(int_str, "%d", weekData[i]);
+        printLabels(startLabelX, weekData[i]+5, int_str);
         
-    }
-    
+        if (i>=start)
+        {       
+            drawTopLines(startX, prevHeight, endX, weekData[i]);
+            startX += STEP; 
+            endX += STEP; 
+        }
 
+        startLabelX+=STEP;
+        prevHeight = weekData[i];
+    }
 }
 
 // draw bars on the chart
 void drawBars(int x1, int width, int totalHours)
 {
     glColor3f(0.0, 0.0, 1.0);
-    int y2 = 10+(totalHours/10);
     int x2 = x1+width;
-    glRecti(x1, 10, x2, y2);
+    glRecti(x1, 0, x2, totalHours);
 }
-
-
 
 // draw chart
 void drawChart(void)
 {
-    int startPos = 32.5;
-    int labelXpos = 35;
-    
-    for (int i = 0; i < ACT; i++) 
+    char int_str[2];
+    int i = (start-1);
+    int startX = 0;
+    int startLabelX=1;
+    for ( i; i < end; i++) 
     {
-        // printf("\n activity %s has these hours: ", activities[i].name);
-        printLabels(labelXpos, 5, activities[i].name);
-        int activityHours = 0;
-        for (int j = 0; j < 53; j++) 
-        {
-            activityHours += activities[i].hours[j];
-            // printf(" %d ", activityHours);
-        }
-        drawBars(startPos, 10, activityHours);
-        labelXpos += STEP;
-        startPos += STEP; 
+        sprintf(int_str, "%d", i+1);
+        printLabels(startLabelX, -25, int_str);
+        drawBars(startX, 2, weekData[i]);
+        startX+=STEP;
+        startLabelX+=STEP;
     }
 }
 
@@ -260,7 +242,7 @@ void displayFcn(void)
 int main (int argc,char* argv[])
 {   
     processFile();
-    
+
 	glutInit(&argc,argv);
 	glutInitDisplayMode(GLUT_SINGLE | GLUT_RGBA);
 	glutInitWindowPosition(100,100);  /* top left corner */
