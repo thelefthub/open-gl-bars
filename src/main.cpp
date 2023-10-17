@@ -31,7 +31,7 @@ void processData(void)
             weekData[i] = total;
             if (total>yMax) yMax=total;
         }
-        
+        if (total>yMax) yMax=total;
     }
    
 }
@@ -102,8 +102,9 @@ void init(void)
 {
     processData();
     glClearColor(1.0,1.0,1.0,1.0);
-    glMatrixMode(GL_PROJECTION);
-    gluOrtho2D(-0.1*xMax*2, 1.1*xMax*2, -0.1*yMax,1.1*yMax);
+    // glMatrixMode(GL_PROJECTION);
+    // glLoadIdentity();
+    // gluOrtho2D(-0.1*xMax*2, 1.1*xMax*2, -0.1*yMax,1.1*yMax);
     glColor3f(0.0, 0.0, 1.0);
 }
 
@@ -144,6 +145,7 @@ void printLabels(int x, int y, char *string)
 }
 
 // draw lines connecting the top of consecutive bars
+// use glBegin(GL_LINE_STRIP) as optimization?
 void drawTopLines(int x1, int y1, int x2, int y2)
 {
     glBegin(GL_LINES);
@@ -220,7 +222,10 @@ void keyInteraction(unsigned char key, int x, int y)
 
 void winReshapeFcn (GLint newWidth, GLint newHeight)
 {
-	glViewport (0,0,newWidth,newHeight);
+    glMatrixMode(GL_PROJECTION);
+    glLoadIdentity();
+    gluOrtho2D(-0.1*xMax*2, 1.1*xMax*2, -0.1*yMax,1.1*yMax);
+    glViewport (0,0,newWidth,newHeight);
 	winWidth = newWidth;
 	winHeight = newHeight;
     fprintf(stderr, "window size %dx%d\n", newWidth, newHeight);
@@ -230,12 +235,14 @@ void winReshapeFcn (GLint newWidth, GLint newHeight)
 void displayFcn(void)
 {
 	glClear(GL_COLOR_BUFFER_BIT);
+    glMatrixMode(GL_MODELVIEW);
+    glLoadIdentity();
     drawChart();
     xAxesDef();
     yAxesDef();
     if (lines) showLines();
     glFlush();
-    glutSwapBuffers();
+    // glutSwapBuffers(); // only use for animation and double buffering...
 }
 
 
@@ -244,7 +251,7 @@ int main (int argc,char* argv[])
     processFile();
 
 	glutInit(&argc,argv);
-	glutInitDisplayMode(GLUT_SINGLE | GLUT_RGBA);
+	glutInitDisplayMode(GLUT_SINGLE | GLUT_RGBA); // GLUT_DOUBLE for animation...
 	glutInitWindowPosition(100,100);  /* top left corner */
 	glutInitWindowSize(winWidth,winHeight);
 	glutCreateWindow("Bar chart");
