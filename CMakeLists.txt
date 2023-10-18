@@ -8,6 +8,8 @@ find_package(GLUT REQUIRED)
 add_executable(open_gl_bars 
   src/main.cpp
   src/bar.h
+  src/colour.h
+  
 )
 
 target_link_libraries(open_gl_bars 

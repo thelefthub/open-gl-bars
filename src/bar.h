@@ -3,7 +3,7 @@
 #define NLEN 12
 #define WLEN 53
 typedef struct activity
-        {
-            char name[NLEN];
-            int hours[WLEN];
-        } Activity;
+{
+    char name[NLEN];
+    int hours[WLEN];
+} Activity;

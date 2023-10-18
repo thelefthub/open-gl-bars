@@ -4,6 +4,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include "colour.h"
 
 #define INNM "../gegev.txt"
 #define LLEN 500
@@ -12,8 +13,24 @@
 #define STEP 2
 
 
-GLint winWidth = 800, winHeight = 800, prevHeight = 0, structCount = 0, start, end, xMax, yMax=0, act;
+GLint winWidth = 800, winHeight = 800, prevHeight = 0, structCount = 0, start, end, xMax, yMax=0, act, clickCount=0;
 Activity activities[ACTNUM];
+GLint clicked[ACTNUM];
+
+// colours to use for acitivity share
+// todo: add more colours for [ACTNUM]...
+Colour colours[ACTNUM] = {
+        {0.5f, 0.0f, 0.0f},
+        {0.0f, 1.0f, 0.0f},
+        {0.0f, 0.0f, 1.0f},
+        {0.000f, 0.502f, 0.000f},
+        {1.000f, 0.000f, 1.000f},
+        {1.000f, 1.000f, 0.000f},
+        {0.251f, 0.878f, 0.816f},
+        {0.722f, 0.525f, 0.043f},
+        {0.184f, 0.310f, 0.310f} 
+    };
+
 // int weekData [ WLEN ][ ACTNUM ];
 int weekData [ WLEN ];
 
@@ -112,8 +129,8 @@ void init(void)
 void xAxesDef(void)
 {
     glBegin(GL_LINES);
-    // glPointSize(20.0);
     glColor3f(0.412, 0.412, 0.412);
+    glLineWidth(10);
     glVertex2i(0, 0);
     glVertex2i(xMax*2, 0);
     glEnd();
@@ -124,7 +141,6 @@ void xAxesDef(void)
 void yAxesDef(void)
 {
     glBegin(GL_LINES);
-    // glPointSize(20.0);
     glColor3f(0.412, 0.412, 0.412);
     glVertex2i(0, 0);
     glVertex2i(0, yMax);
@@ -149,7 +165,6 @@ void printLabels(int x, int y, char *string)
 void drawTopLines(int x1, int y1, int x2, int y2)
 {
     glBegin(GL_LINES);
-    // glPointSize(20.0);
     glColor3f(0.93, 0.05, 0.03);
     glVertex2i(x1, y1);
     glVertex2i(x2, y2);
@@ -183,12 +198,28 @@ void showLines(void)
     }
 }
 
-// draw bars on the chart
-void drawBars(int x1, int width, int totalHours)
+// draw regular bars on the chart
+void drawRegularBar(int x1, int width, int totalHours)
 {
     glColor3f(0.0, 0.0, 1.0);
     int x2 = x1+width;
     glRecti(x1, 0, x2, totalHours);
+}
+
+// draw coloured bars on the chart
+void drawColourBar(int x1, int width, int week)
+{
+    int y1 = 0;
+    int y2 = 0;
+    int x2 = x1+width;
+    for (int i = 0; i < ACTNUM; i++) 
+    {
+        glColor3f(colours[i].r, colours[i].g, colours[i].b);
+        y2 += activities[i].hours[week];
+        glRecti(x1, y1, x2, y2);
+        y1=y2;
+    }
+    
 }
 
 // draw chart
@@ -198,11 +229,30 @@ void drawChart(void)
     int i = (start-1);
     int startX = 0;
     int startLabelX=1;
+    bool printColour; 
     for ( i; i < end; i++) 
     {
+        printColour = false;
         sprintf(int_str, "%d", i+1);
         printLabels(startLabelX, -25, int_str);
-        drawBars(startX, 2, weekData[i]);
+
+        for (int j = 0; j < xMax; j++) 
+        {
+            if (clicked[j] == (i+1))
+            {
+                printColour = true;
+            }
+        }
+
+        if (printColour)
+        {
+            drawColourBar(startX, 2, i);
+        }
+        else
+        {
+            drawRegularBar(startX, 2, weekData[i]);
+        }
+        
         startX+=STEP;
         startLabelX+=STEP;
     }
@@ -216,6 +266,119 @@ void keyInteraction(unsigned char key, int x, int y)
         case 's': printf(" press q"); lines=true; break;    
         case 'q': printf(" press q"); lines=false; break;
         case ESC: exit(0); break;
+    }
+    glutPostRedisplay();
+}
+
+// helper func
+int getIndex (int *array, int element, int arrayLength)
+{
+    int index = 0;
+     
+    for (int i = 0; i < arrayLength; i++) {
+        if (array[i] == element) {
+            index = i;
+            break;
+        }
+    }
+    return index;
+
+}
+
+// helper func
+void removeElement(int *array, int index, int arrayLength)
+{
+   int i;
+   for (i = index; i < arrayLength; i++) 
+   {
+    array[i] = array[i + 1];
+   }
+}
+
+int getBar(int x, int y) {
+    int leftMargin = winWidth * 0.1;
+    int rightMargin = winWidth * 0.9;
+    int topMargin = winHeight * 0.1;
+    int bottomtMargin = winHeight * 0.95;
+    int colWidth = (winWidth * 0.8)/xMax;
+    int colCheck = colWidth;
+    float colPercentage;
+    int topY;
+    int bar = 0;
+
+    if (x < leftMargin || x > rightMargin)
+    {
+        printf(" %d not between %d or %d\n", x, leftMargin, rightMargin);
+        return bar;
+    }
+    else if (y < topMargin || y > bottomtMargin)
+    {
+        printf(" %d not between %d or %d\n", y, topMargin, bottomtMargin);
+
+        return bar;
+    }
+    else 
+    {
+        int i = (start-1);
+        for ( i; i < end; i++) 
+        {
+            if((x-leftMargin)<colCheck)
+            {
+                // printf("passing col %d for total %d\n", (i+1), weekData[i]);
+                                
+                if (weekData[i] == 0) 
+                {
+                    bar = 0; 
+                    break;
+                }
+                
+                colPercentage = 1 - (float) weekData[i]/yMax;
+                topY = topMargin + colPercentage * winHeight*0.8;
+                // printf(" percentage of col %f with max top %d and click on %d\n", colPercentage, topY, y);
+
+                if (y > topY) 
+                {
+                    bar =  (i+1); 
+                    break;
+                }
+                break;
+            }
+            colCheck += colWidth;
+
+        }
+        return bar;
+        
+        
+    }
+    
+
+    
+
+}
+
+// mouse click interaction
+void mouseInteraction(int button, int state, int x, int y)
+{
+    int bar = getBar(x, y);
+    switch(button)
+    {
+        case GLUT_LEFT_BUTTON:
+            if(bar == 0) break;
+            clicked[clickCount]=bar;
+            clickCount++; 
+            break;    
+        case GLUT_RIGHT_BUTTON: 
+            if(bar == 0) break;
+            else if (clickCount == 0)break;
+            else if (clickCount > 0)
+            {
+                removeElement(clicked, getIndex(clicked, bar, clickCount), clickCount);
+                clickCount--;
+                break;
+            }
+            else break;
+            
+            
     }
     glutPostRedisplay();
 }
@@ -259,6 +422,7 @@ int main (int argc,char* argv[])
 	glutDisplayFunc(displayFcn);	
 	glutReshapeFunc(winReshapeFcn);
     glutKeyboardFunc(keyInteraction);
+    glutMouseFunc(mouseInteraction);
 	glutMainLoop();
 
 	return 0;
