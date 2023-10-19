@@ -35,6 +35,7 @@ Colour colours[ACTNUM] = {
 int weekData [ WLEN ];
 
 bool lines = false;
+bool labels = false;
 
 void processData(void)
 {
@@ -113,6 +114,19 @@ void processFile(void)
     fclose(finp);
 }
 
+// menu definition
+void handleMenu(int id)
+{
+    printf("your option %d\n", id);
+    switch(id)
+    {
+        case 1: lines=true; break;
+        case 2: labels=true; break;
+        case 3: glClearColor(0.0, 0.0, 1.0, 0.0); break;
+    }
+    glutPostRedisplay();
+}
+
 
 void init(void)
 {
@@ -122,7 +136,17 @@ void init(void)
     // glLoadIdentity();
     // gluOrtho2D(-0.1*xMax*2, 1.1*xMax*2, -0.1*yMax,1.1*yMax);
     glColor3f(0.0, 0.0, 1.0);
+
+    // GLint menu;
+    // menu = 
+    glutCreateMenu(handleMenu);
+    glutAddMenuEntry(" show lines", 1);
+    glutAddMenuEntry(" show labels", 2);
+    glutAddMenuEntry("change background", 3);
+    glutAttachMenu(GLUT_MIDDLE_BUTTON);
 }
+
+
 
 // draw x-axis on window
 void xAxesDef(void)
@@ -149,7 +173,7 @@ void yAxesDef(void)
 
 void printLabels(int x, int y, char *string)
 {
-    glColor3f(0.412, 0.412, 0.412);
+    glColor3f(0.93, 0.05, 0.03);
     glRasterPos2f(x, y);
     int len, i;
     len = (int)strlen(string);
@@ -174,6 +198,7 @@ void drawTopLines(int x1, int y1, int x2, int y2)
 // show result labels and lines connecting bars
 void showLines(void)
 {
+    
     char int_str[4];
     int i = (start-1);
     int startX = 1;
@@ -182,8 +207,12 @@ void showLines(void)
     int prevHeight;
     for ( i; i < end; i++) 
     {
-        sprintf(int_str, "%d", weekData[i]);
-        printLabels(startLabelX, weekData[i]+5, int_str);
+        if (labels) 
+        {
+            sprintf(int_str, "%d", weekData[i]);
+            printLabels(startLabelX, weekData[i]+5, int_str);
+        }
+        
         
         if (i>=start)
         {       
