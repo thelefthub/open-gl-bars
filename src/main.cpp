@@ -15,7 +15,7 @@
 
 GLint winWidth = 800, winHeight = 800, prevHeight = 0, structCount = 0, start, end, xMax, yMax=0, act, clickCount=0;
 Activity activities[ACTNUM];
-GLint clicked[ACTNUM];
+GLint clicked[WLEN];
 
 // colours to use for acitivity share
 // todo: add more colours for [ACTNUM]...
@@ -46,7 +46,6 @@ void processData(void)
         {
             total += activities[j].hours[i];
             weekData[i] = total;
-            if (total>yMax) yMax=total;
         }
         if (total>yMax) yMax=total;
     }
@@ -127,21 +126,21 @@ void init(void)
 
 // draw x-axis on window
 void xAxesDef(void)
-{
-    glBegin(GL_LINES);
+{    
     glColor3f(0.412, 0.412, 0.412);
-    glLineWidth(10);
+    glBegin(GL_LINES);
     glVertex2i(0, 0);
     glVertex2i(xMax*2, 0);
     glEnd();
+    
     
 }
 
 // draw y-axis on window
 void yAxesDef(void)
 {
-    glBegin(GL_LINES);
     glColor3f(0.412, 0.412, 0.412);
+    glBegin(GL_LINES);
     glVertex2i(0, 0);
     glVertex2i(0, yMax);
     glEnd();
@@ -164,8 +163,8 @@ void printLabels(int x, int y, char *string)
 // use glBegin(GL_LINE_STRIP) as optimization?
 void drawTopLines(int x1, int y1, int x2, int y2)
 {
-    glBegin(GL_LINES);
     glColor3f(0.93, 0.05, 0.03);
+    glBegin(GL_LINES);
     glVertex2i(x1, y1);
     glVertex2i(x2, y2);
     glEnd();
@@ -234,7 +233,7 @@ void drawChart(void)
     {
         printColour = false;
         sprintf(int_str, "%d", i+1);
-        printLabels(startLabelX, -25, int_str);
+        printLabels(startLabelX, (-yMax *0.025), int_str);
 
         for (int j = 0; j < xMax; j++) 
         {
@@ -295,71 +294,53 @@ void removeElement(int *array, int index, int arrayLength)
    }
 }
 
-int getBar(int x, int y) {
-    int leftMargin = winWidth * 0.1;
-    int rightMargin = winWidth * 0.9;
-    int topMargin = winHeight * 0.1;
-    int bottomtMargin = winHeight * 0.95;
-    int colWidth = (winWidth * 0.8)/xMax;
-    int colCheck = colWidth;
-    float colPercentage;
-    int topY;
+
+int getBar (int x, int y)
+{
     int bar = 0;
 
-    if (x < leftMargin || x > rightMargin)
+    // cfr. gluOrtho def
+    GLdouble width=(xMax*1.2*2);
+    GLdouble xProportion = width/winWidth;
+    int xLocation = (int)((xProportion*x) -0.1*xMax*2) ;
+    GLdouble height=(1.2*yMax);
+    GLdouble yProportion = height/winHeight;
+    int yLocation = (int)((yProportion*y) -0.1*yMax) ;
+
+    if (xLocation < 0 || xLocation > (xMax*2))
     {
-        printf(" %d not between %d or %d\n", x, leftMargin, rightMargin);
+        printf(" %d not between %d or %d\n", xLocation, 0, xMax);
         return bar;
     }
-    else if (y < topMargin || y > bottomtMargin)
+    else if (yLocation < 0 || yLocation > yMax)
     {
-        printf(" %d not between %d or %d\n", y, topMargin, bottomtMargin);
-
+        printf(" %d not between %d or %d\n", yLocation, 0, yMax);
         return bar;
     }
     else 
     {
-        int i = (start-1);
-        for ( i; i < end; i++) 
+        int week = (start-1) + (xLocation/2);
+        if (weekData[week] == 0) 
         {
-            if((x-leftMargin)<colCheck)
-            {
-                // printf("passing col %d for total %d\n", (i+1), weekData[i]);
-                                
-                if (weekData[i] == 0) 
-                {
-                    bar = 0; 
-                    break;
-                }
-                
-                colPercentage = 1 - (float) weekData[i]/yMax;
-                topY = topMargin + colPercentage * winHeight*0.8;
-                // printf(" percentage of col %f with max top %d and click on %d\n", colPercentage, topY, y);
-
-                if (y > topY) 
-                {
-                    bar =  (i+1); 
-                    break;
-                }
-                break;
-            }
-            colCheck += colWidth;
+            return bar;
+        }
+        if ((yMax - weekData[week]) < yLocation)
+        {
+            // printf(" ylocoation? %d for week %d\n",yLocation, week+1);
+            return  week+1; 
 
         }
+
         return bar;
-        
         
     }
     
-
-    
-
 }
 
 // mouse click interaction
 void mouseInteraction(int button, int state, int x, int y)
 {
-    int bar = getBar(x, y);
+    int bar = getBar(x,y);
     switch(button)
     {
         case GLUT_LEFT_BUTTON:
